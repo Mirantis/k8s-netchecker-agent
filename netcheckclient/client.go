@@ -17,6 +17,10 @@ import (
 // and updating of the agents
 var NetcheckerAgentsEndpoint = "/api/v1/agents/"
 
+// EnvVarPodName is name of environment variable that stores k8s pod name
+// inside which the agent is running
+var EnvVarPodName = "MY_POD_NAME"
+
 // Payload describes request data to be sent to netchecker server
 type Payload struct {
 	ReportInterval string    `json:"report_interval"`
@@ -24,7 +28,14 @@ type Payload struct {
 	HostDate       time.Time `json:"hostdate"`
 }
 
-func sendMarshaled(c *http.Client, p *Payload, url string) (*http.Response, error) {
+// Client represents HTTP client interface
+type Client interface {
+	Do(req *http.Request) (*http.Response, error)
+}
+
+// SendMarshaled marshals given payload, constructs http request and
+// sends to the server URL
+func SendMarshaled(c Client, p *Payload, url string) (*http.Response, error) {
 	m, err := json.Marshal(p)
 	if err != nil {
 		return nil, err
@@ -42,17 +53,18 @@ func sendMarshaled(c *http.Client, p *Payload, url string) (*http.Response, erro
 	return resp, err
 }
 
-// Place holder for more sophisticated response analysis
-func analyzeResponse(resp *http.Response) {
+// AnalyzeResponse is a place holder for more sophisticated response analysis
+func AnalyzeResponse(resp *http.Response) error {
 	if resp.StatusCode != 200 {
-		glog.Warning("Response from the server is not OK")
+		return errors.New("Response from the server is not OK")
 	}
+	return nil
 }
 
 // StartSending constructs and sends requests to the server in infinite loop
 func StartSending(serverEndpoint, reportInterval string) error {
 	var podName string
-	if podName = os.Getenv("MY_POD_NAME"); len(podName) == 0 {
+	if podName = os.Getenv(EnvVarPodName); len(podName) == 0 {
 		return errors.New("Environment variable MY_POD_NAME is not set")
 	}
 
@@ -72,11 +84,16 @@ func StartSending(serverEndpoint, reportInterval string) error {
 		// daemon
 		glog.Flush()
 
-		resp, err := sendMarshaled(client, P, url)
+		resp, err := SendMarshaled(client, P, url)
 		if err != nil {
 			return err
 		}
-		analyzeResponse(resp)
+
+		// let's just treat unsuccessful response as a warning
+		err = AnalyzeResponse(resp)
+		if err != nil {
+			glog.Warning("Analyzing response fails. Err --> %v\n", err)
+		}
 
 		sleepSeconds, err := strconv.Atoi(reportInterval)
 		if err != nil {
