@@ -20,5 +20,10 @@ build-containerized: prepare-build-container dist
 prepare-deploy-container: build-containerized
 	docker build -t $(DEPLOY_CONTAINER_NAME):$(DEPLOY_CONTAINER_TAG) .
 
+test-containerized: prepare-build-container
+	docker run --rm \
+		-v ${PWD}:/go/src/github.com/aateem/mcp-netchecker-agent:ro \
+		$(BUILD_CONTAINER_NAME) go test ./tests
+
 clean :
 	rm -rf dist
