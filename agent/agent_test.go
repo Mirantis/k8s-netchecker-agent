@@ -1,4 +1,4 @@
-package clienttest
+package agent
 
 import (
 	"bytes"
@@ -8,16 +8,14 @@ import (
 	"os"
 	"testing"
 	"time"
-
-	"github.com/aateem/mcp-netchecker-agent/netcheckclient"
 )
 
 func TestStartSendingFailIfEnvVarNotSet(t *testing.T) {
-	if _, set := os.LookupEnv(netcheckclient.EnvVarPodName); set == false {
-		os.Unsetenv(netcheckclient.EnvVarPodName)
+	if _, set := os.LookupEnv(EnvVarPodName); !set {
+		os.Unsetenv(EnvVarPodName)
 	}
 
-	err := netcheckclient.StartSending("", "")
+	err := StartSending("localhost:8888", "")
 	if err == nil {
 		t.Error("Error is expected to be returned when $MY_POD_NAME is unset")
 	}
@@ -28,13 +26,13 @@ func TestAnalyzeResponse(t *testing.T) {
 		StatusCode: 400,
 	}
 
-	err := netcheckclient.AnalyzeResponse(fakeResp)
+	err := AnalyzeResponse(fakeResp)
 	if err == nil {
 		t.Error("Fake resp must return error in case resp is not OK")
 	}
 
 	fakeResp.StatusCode = 200
-	err = netcheckclient.AnalyzeResponse(fakeResp)
+	err = AnalyzeResponse(fakeResp)
 
 	if err != nil {
 		t.Error("Fake resp must not return error in case resp is OK")
@@ -53,7 +51,7 @@ func (c *FakeHTTPClient) Do(req *http.Request) (*http.Response, error) {
 func TestSendMarshaled(t *testing.T) {
 	fakeClient := &FakeHTTPClient{}
 
-	fakePayload := &netcheckclient.Payload{
+	fakePayload := &Payload{
 		PodName:        "test_pod",
 		ReportInterval: "10",
 		HostDate:       time.Now(),
@@ -61,7 +59,7 @@ func TestSendMarshaled(t *testing.T) {
 
 	fakeURL := "http://fake-url.edu"
 
-	resp, err := netcheckclient.SendMarshaled(fakeClient, fakePayload, fakeURL)
+	resp, err := SendMarshaled(fakeClient, fakePayload, fakeURL)
 
 	if resp == nil && err != nil {
 		t.Error("SendMarshalled should not return error with given data")

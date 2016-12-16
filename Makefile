@@ -1,3 +1,4 @@
+BUILD_DIR=_output
 BUILD_CONTAINER_NAME=mcp-netchecker-agent.build
 DEPLOY_CONTAINER_NAME=aateem/mcp-netchecker-agent
 DEPLOY_CONTAINER_TAG=golang
@@ -24,6 +25,24 @@ test-containerized: prepare-build-container
 	docker run --rm \
 		-v ${PWD}:/go/src/github.com/aateem/mcp-netchecker-agent:ro \
 		$(BUILD_CONTAINER_NAME) go test ./tests
+
+$(BUILD_DIR):
+	mkdir $(BUILD_DIR)
+
+.PHONY: build-agent
+build-agent:
+	go build -v agent/agent.go
+
+build-local: clean-build $(BUILD_DIR) build-agent
+	go build -v -o $(BUILD_DIR)/app cmd/app.go
+
+.PHONY: clean-build
+clean-build:
+	rm -rf $(BUILD_DIR)
+
+.PHONY: test
+test:
+	go test -v ./agent/...
 
 clean :
 	rm -rf dist

@@ -1,21 +1,25 @@
-package netcheckclient
+package agent
 
 import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/golang/glog"
+	//"github.com/vishvananda/netlink"
 )
 
 // NetcheckerAgentsEndpoint is part of URI providing access to
 // netchecker server that designates endpoint for retrieving
 // and updating of the agents
-var NetcheckerAgentsEndpoint = "/api/v1/agents/"
+var NetcheckerAgentsEndpoint = "/api/v1/agents"
 
 // EnvVarPodName is name of environment variable that stores k8s pod name
 // inside which the agent is running
@@ -23,9 +27,11 @@ var EnvVarPodName = "MY_POD_NAME"
 
 // Payload describes request data to be sent to netchecker server
 type Payload struct {
-	ReportInterval string    `json:"report_interval"`
-	PodName        string    `json:"podname"`
-	HostDate       time.Time `json:"hostdate"`
+	ReportInterval string              `json:"report_interval"`
+	PodName        string              `json:"podname"`
+	HostDate       time.Time           `json:"hostdate"`
+	LookupHost     []string            `json:"nslookup"`
+	IPs            map[string][]string `json:"ips"`
 }
 
 // Client represents HTTP client interface
@@ -35,15 +41,15 @@ type Client interface {
 
 // SendMarshaled marshals given payload, constructs http request and
 // sends to the server URL
-func SendMarshaled(c Client, p *Payload, url string) (*http.Response, error) {
+func SendMarshaled(c Client, p *Payload, requestURL string) (*http.Response, error) {
+	glog.V(10).Infof("Request payload before marshaling: %v", p)
 	m, err := json.Marshal(p)
 	if err != nil {
 		return nil, err
 	}
 
-	glog.V(4).Infof("Marshaled payload --> %s\n", m)
-
-	req, err := http.NewRequest("POST", url, bytes.NewReader(m))
+	glog.V(5).Infof("Send payload via URL: %v", requestURL)
+	req, err := http.NewRequest("POST", requestURL, bytes.NewReader(m))
 	if err != nil {
 		return nil, err
 	}
@@ -71,12 +77,13 @@ func StartSending(serverEndpoint, reportInterval string) error {
 	P := &Payload{
 		ReportInterval: reportInterval,
 		PodName:        podName,
-		HostDate:       time.Now(),
 	}
 
-	url := "http://" + serverEndpoint + NetcheckerAgentsEndpoint + podName
-	glog.V(4).Infof("Netchecker server URL --> %s", url)
-
+	reqURL := url.URL{
+		Scheme: "http",
+		Host:   serverEndpoint,
+		Path:   strings.Join([]string{NetcheckerAgentsEndpoint, podName}, "/"),
+	}
 	client := &http.Client{}
 
 	for {
@@ -84,7 +91,17 @@ func StartSending(serverEndpoint, reportInterval string) error {
 		// daemon
 		glog.Flush()
 
-		resp, err := SendMarshaled(client, P, url)
+		P.HostDate = time.Now()
+
+		addrs, err := net.LookupHost(strings.Split(serverEndpoint, ":")[0])
+		if err != nil {
+			glog.Errorf("DNS look up host error. Details: %v", err)
+		}
+		P.LookupHost = addrs
+
+		P.IPs = linkV4Info()
+
+		resp, err := SendMarshaled(client, P, reqURL.String())
 		if err != nil {
 			return err
 		}
@@ -92,7 +109,7 @@ func StartSending(serverEndpoint, reportInterval string) error {
 		// let's just treat unsuccessful response as a warning
 		err = AnalyzeResponse(resp)
 		if err != nil {
-			glog.Warning("Analyzing response fails. Err --> %v\n", err)
+			glog.Warning("Analyzing response fails. Detals: %v", err)
 		}
 
 		sleepSeconds, err := strconv.Atoi(reportInterval)
@@ -100,7 +117,33 @@ func StartSending(serverEndpoint, reportInterval string) error {
 			return err
 		}
 
-		glog.V(4).Infof("Sleep for %v second(s)\n", sleepSeconds)
+		glog.V(4).Infof("Sleep for %v second(s)", sleepSeconds)
 		time.Sleep(time.Duration(sleepSeconds) * time.Second)
 	}
+}
+
+func linkV4Info() map[string][]string {
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		glog.Errorf("Fail to collect information on ifaces. Details: %v", err)
+		return nil
+	}
+
+	result := map[string][]string{}
+	for _, i := range ifaces {
+		addrs, err := i.Addrs()
+		if err != nil {
+			glog.Errorf("Fail get addresses for iface %v. Details: %v", i.Name, err)
+			continue
+		}
+
+		addrArr := []string{}
+		for _, a := range addrs {
+			addrArr = append(addrArr, a.String())
+		}
+		result[i.Name] = addrArr
+	}
+	glog.V(10).Infof("Addresses of host's links: %v", result)
+
+	return result
 }

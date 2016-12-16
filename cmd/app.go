@@ -4,7 +4,7 @@ import (
 	"flag"
 	"os"
 
-	"github.com/aateem/mcp-netchecker-agent/netcheckclient"
+	"github.com/aateem/mcp-netchecker-agent/agent"
 	"github.com/golang/glog"
 )
 
@@ -18,11 +18,14 @@ func main() {
 	flag.StringVar(&reportInterval, "reportinterval", "60", "Agent report interval")
 	flag.Parse()
 
-	glog.V(4).Info("Starting agent")
+	glog.V(5).Infof("Provided server endpoint: %v", serverEndpoint)
+	glog.V(5).Infof("Provided report interval: %v", reportInterval)
 
-	err := netcheckclient.StartSending(serverEndpoint, reportInterval)
+	glog.Info("Starting agent")
+
+	err := agent.StartSending(serverEndpoint, reportInterval)
 	if err != nil {
-		glog.Errorf("Cancel sending due to error. Err --> %v\n", err)
+		glog.Errorf("Cancel sending due to error. Details: %v", err)
 		os.Exit(1)
 	}
 }
