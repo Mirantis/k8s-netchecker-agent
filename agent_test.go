@@ -1,43 +1,13 @@
-package agent
+package main
 
 import (
-	"bytes"
 	"encoding/json"
+	"net"
 	"net/http"
-	"net/url"
-	"os"
+	"reflect"
+	"strings"
 	"testing"
-	"time"
 )
-
-func TestStartSendingFailIfEnvVarNotSet(t *testing.T) {
-	if _, set := os.LookupEnv(EnvVarPodName); !set {
-		os.Unsetenv(EnvVarPodName)
-	}
-
-	err := StartSending("localhost:8888", "")
-	if err == nil {
-		t.Error("Error is expected to be returned when $MY_POD_NAME is unset")
-	}
-}
-
-func TestAnalyzeResponse(t *testing.T) {
-	fakeResp := &http.Response{
-		StatusCode: 400,
-	}
-
-	err := AnalyzeResponse(fakeResp)
-	if err == nil {
-		t.Error("Fake resp must return error in case resp is not OK")
-	}
-
-	fakeResp.StatusCode = 200
-	err = AnalyzeResponse(fakeResp)
-
-	if err != nil {
-		t.Error("Fake resp must not return error in case resp is OK")
-	}
-}
 
 type FakeHTTPClient struct {
 	recordedRequest *http.Request
@@ -45,28 +15,23 @@ type FakeHTTPClient struct {
 
 func (c *FakeHTTPClient) Do(req *http.Request) (*http.Response, error) {
 	c.recordedRequest = req
-	return &http.Response{}, nil
+	return nil, nil
 }
 
-func TestSendMarshaled(t *testing.T) {
+func TestSendInfo(t *testing.T) {
 	fakeClient := &FakeHTTPClient{}
 
-	fakePayload := &Payload{
-		PodName:        "test_pod",
-		ReportInterval: "10",
-		HostDate:       time.Now(),
+	serverEndPoint := "localhost:8888"
+	reportInterval := "5"
+	podName := "test-pod"
+	_, err := sendInfo(serverEndPoint, reportInterval, podName, fakeClient)
+	if err != nil {
+		t.Errorf("sendInfo should not return error. Details: %v", err)
 	}
 
-	fakeURL := "http://fake-url.edu"
-
-	resp, err := SendMarshaled(fakeClient, fakePayload, fakeURL)
-
-	if resp == nil && err != nil {
-		t.Error("SendMarshalled should not return error with given data")
-	}
-
-	if parsedURL, _ := url.Parse(fakeURL); *parsedURL != *fakeClient.recordedRequest.URL {
-		t.Errorf("Request does not use provided URL")
+	expectedURL := "http://" + serverEndPoint + NetcheckerAgentsEndpoint + "/" + podName
+	if reqURL := fakeClient.recordedRequest.URL.String(); reqURL != expectedURL {
+		t.Errorf("URL used in the request is not as expected. Actual %v", reqURL)
 	}
 
 	if fakeClient.recordedRequest.Method != "POST" {
@@ -85,11 +50,27 @@ func TestSendMarshaled(t *testing.T) {
 		t.Error("Content-Type header must be properly set for header (correct - application/json)")
 	}
 
-	fakeMarshaled, _ := json.Marshal(fakePayload)
-	byteBody := make([]byte, fakeClient.recordedRequest.ContentLength)
-	fakeClient.recordedRequest.Body.Read(byteBody)
+	body := make([]byte, fakeClient.recordedRequest.ContentLength)
+	_, err = fakeClient.recordedRequest.Body.Read(body)
+	if err != nil {
+		t.Errorf("Error should not occur while reading fake requests's body. Details: %v", err)
+	}
 
-	if equal := bytes.Equal(byteBody, fakeMarshaled); !equal {
-		t.Error("Request's body is not as expected")
+	payload := &Payload{}
+	err = json.Unmarshal(body, payload)
+	if err != nil {
+		t.Errorf("Error should not occur while unmarshaling fake request's payload. Details: %v", err)
+	}
+
+	if expectedIPs := linkV4Info(); !reflect.DeepEqual(expectedIPs, payload.IPs) {
+		t.Errorf("IPs data from payload is not as expected. expected %v\n actual %v", expectedIPs, payload.IPs)
+	}
+
+	addrs, err := net.LookupHost(strings.Split(serverEndPoint, ":")[0])
+	if err != nil {
+		t.Errorf("DNS look up error should not occur. Details: %v", err)
+	}
+	if !reflect.DeepEqual(payload.LookupHost, addrs) {
+		t.Errorf("LookupHost data from the payload is not as expected")
 	}
 }
