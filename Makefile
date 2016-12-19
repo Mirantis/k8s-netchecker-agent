@@ -29,12 +29,8 @@ test-containerized: prepare-build-container
 $(BUILD_DIR):
 	mkdir $(BUILD_DIR)
 
-.PHONY: build-agent
-build-agent:
-	go build -v agent/agent.go
-
-build-local: clean-build $(BUILD_DIR) build-agent
-	go build -v -o $(BUILD_DIR)/app cmd/app.go
+build-local: clean-build $(BUILD_DIR)
+	go build -v -o $(BUILD_DIR)/agent agent.go
 
 .PHONY: clean-build
 clean-build:
@@ -42,7 +38,7 @@ clean-build:
 
 .PHONY: test
 test:
-	go test -v ./agent/...
+	go test -v ./...
 
 clean :
 	rm -rf dist
