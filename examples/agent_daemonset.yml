@@ -1,0 +1,60 @@
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  labels:
+    app: netchecker-agent-hostnet
+  name: netchecker-agent
+spec:
+  template:
+    metadata:
+      name: netchecker-agent
+      labels:
+        app: netchecker-agent
+    spec:
+      containers:
+        - name: netchecker-agent
+          image: aateem/mcp-netchecker-agent:golang
+          env:
+            - name: MY_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          args:
+            - "-v=5"
+            - "-alsologtostderr=true"
+            - "-serverendopoint=0.0.0.0:8888"
+            - "-reportinterval=60"
+          imagePullPolicy: Always
+      nodeSelector:
+        netchecker: agent
+---
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  labels:
+    app: netchecker-agent-hostnet
+  name: netchecker-agent-hostnet
+spec:
+  template:
+    metadata:
+      name: netchecker-agent-hostnet
+      labels:
+        app: netchecker-agent-hostnet
+    spec:
+      hostNetwork: True
+      containers:
+        - name: netchecker-agent
+          image: aateem/mcp-netchecker-agent:golang
+          env:
+            - name: MY_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          args:
+            - "-v=5"
+            - "-alsologtostderr=true"
+            - "-serverendopoint=0.0.0.0:8888"
+            - "-reportinterval=60"
+          imagePullPolicy: Always
+      nodeSelector:
+        netchecker: agent
