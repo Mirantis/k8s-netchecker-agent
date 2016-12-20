@@ -41,3 +41,7 @@ test:
 clean-all: clean-build
 	docker rmi $(BUILD_CONTAINER_NAME)
 	docker rmi $(DEPLOY_CONTAINER_NAME):$(DEPLOY_CONTAINER_TAG)
+
+.PHONY: get-deps
+get-deps:
+	go get github.com/golang/glog
