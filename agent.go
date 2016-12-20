@@ -100,7 +100,7 @@ func main() {
 		reportInterval string
 	)
 
-	flag.StringVar(&serverEndpoint, "serverendpoint", "127.0.0.1:8081", "Host address and port on which netchecker server is listening")
+	flag.StringVar(&serverEndpoint, "serverendpoint", "netchecker-service:8081", "Netchecker server endpoint (host:port)")
 	flag.StringVar(&reportInterval, "reportinterval", "60", "Agent report interval")
 	flag.Parse()
 
