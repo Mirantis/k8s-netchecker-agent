@@ -66,11 +66,12 @@ func TestSendInfo(t *testing.T) {
 		t.Errorf("IPs data from payload is not as expected. expected %v\n actual %v", expectedIPs, payload.IPs)
 	}
 
-	addrs, err := net.LookupHost(strings.Split(serverEndPoint, ":")[0])
+	expectedHost := strings.Split(serverEndPoint, ":")[0]
+	addrs, err := net.LookupHost(expectedHost)
 	if err != nil {
 		t.Errorf("DNS look up error should not occur. Details: %v", err)
 	}
-	if !reflect.DeepEqual(payload.LookupHost, addrs) {
+	if !reflect.DeepEqual(payload.LookupHost, map[string][]string{expectedHost: addrs}) {
 		t.Errorf("LookupHost data from the payload is not as expected")
 	}
 }

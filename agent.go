@@ -28,7 +28,7 @@ type Payload struct {
 	ReportInterval string              `json:"report_interval"`
 	PodName        string              `json:"podname"`
 	HostDate       time.Time           `json:"hostdate"`
-	LookupHost     []string            `json:"nslookup"`
+	LookupHost     map[string][]string `json:"nslookup"`
 	IPs            map[string][]string `json:"ips"`
 }
 
@@ -44,12 +44,8 @@ func sendInfo(serverEndpoint, reportInterval, podName string, client Client) (*h
 		IPs:            linkV4Info(),
 		ReportInterval: reportInterval,
 		PodName:        podName,
+		LookupHost:     nsLookUp(serverEndpoint),
 	}
-	addrs, err := net.LookupHost(strings.Split(serverEndpoint, ":")[0])
-	if err != nil {
-		glog.Errorf("DNS look up host error. Details: %v", err)
-	}
-	payload.LookupHost = addrs
 
 	glog.V(10).Infof("Request payload before marshaling: %v", payload)
 	marshaled, err := json.Marshal(payload)
@@ -66,6 +62,19 @@ func sendInfo(serverEndpoint, reportInterval, podName string, client Client) (*h
 
 	resp, err := client.Do(req)
 	return resp, err
+}
+
+func nsLookUp(endpoint string) map[string][]string {
+	hostname := strings.Split(endpoint, ":")[0]
+	addrs, err := net.LookupHost(hostname)
+	if err != nil {
+		glog.Errorf("DNS look up host error. Details: %v", err)
+	}
+	result := map[string][]string{
+		hostname: addrs,
+	}
+
+	return result
 }
 
 func linkV4Info() map[string][]string {
