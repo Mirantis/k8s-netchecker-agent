@@ -22,9 +22,9 @@ func TestSendInfo(t *testing.T) {
 	fakeClient := &FakeHTTPClient{}
 
 	serverEndPoint := "localhost:8888"
-	reportInterval := "5"
+	reportInterval := 5
 	podName := "test-pod"
-	_, err := sendInfo(serverEndPoint, reportInterval, podName, fakeClient)
+	_, err := sendInfo(serverEndPoint, podName, reportInterval, fakeClient)
 	if err != nil {
 		t.Errorf("sendInfo should not return error. Details: %v", err)
 	}

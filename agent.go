@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -25,26 +24,26 @@ type Client interface {
 }
 
 type Payload struct {
-	ReportInterval string              `json:"report_interval"`
+	ReportInterval int                 `json:"report_interval"`
 	PodName        string              `json:"podname"`
-	HostDate       time.Time           `json:"hostdate"`
+	HostDate       string              `json:"hostdate"`
 	LookupHost     map[string][]string `json:"nslookup"`
 	IPs            map[string][]string `json:"ips"`
 }
 
-func sendInfo(serverEndpoint, reportInterval, podName string, client Client) (*http.Response, error) {
+func sendInfo(srvEndpoint, podName string, repIntl int, cl Client) (*http.Response, error) {
 	reqURL := (&url.URL{
 		Scheme: "http",
-		Host:   serverEndpoint,
+		Host:   srvEndpoint,
 		Path:   strings.Join([]string{NetcheckerAgentsEndpoint, podName}, "/"),
 	}).String()
 
 	payload := &Payload{
-		HostDate:       time.Now(),
+		HostDate:       time.Now().String(),
 		IPs:            linkV4Info(),
-		ReportInterval: reportInterval,
+		ReportInterval: repIntl,
 		PodName:        podName,
-		LookupHost:     nsLookUp(serverEndpoint),
+		LookupHost:     nsLookUp(srvEndpoint),
 	}
 
 	glog.V(10).Infof("Request payload before marshaling: %v", payload)
@@ -60,7 +59,7 @@ func sendInfo(serverEndpoint, reportInterval, podName string, client Client) (*h
 	}
 	req.Header.Add("Content-Type", "application/json")
 
-	resp, err := client.Do(req)
+	resp, err := cl.Do(req)
 	return resp, err
 }
 
@@ -106,11 +105,11 @@ func linkV4Info() map[string][]string {
 func main() {
 	var (
 		serverEndpoint string
-		reportInterval string
+		reportInterval int
 	)
 
 	flag.StringVar(&serverEndpoint, "serverendpoint", "netchecker-service:8081", "Netchecker server endpoint (host:port)")
-	flag.StringVar(&reportInterval, "reportinterval", "60", "Agent report interval")
+	flag.IntVar(&reportInterval, "reportinterval", 60, "Agent report interval")
 	flag.Parse()
 
 	glog.V(5).Infof("Provided server endpoint: %v", serverEndpoint)
@@ -124,18 +123,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	sleepSeconds, err := strconv.Atoi(reportInterval)
-	if err != nil {
-		glog.Errorf("Error while processing report interval. Details: %v", err)
-		os.Exit(1)
-	}
-
 	client := &http.Client{}
 	for {
-		glog.V(4).Infof("Sleep for %v second(s)", sleepSeconds)
-		time.Sleep(time.Duration(sleepSeconds) * time.Second)
+		glog.V(4).Infof("Sleep for %v second(s)", reportInterval)
+		time.Sleep(time.Duration(reportInterval) * time.Second)
 
-		resp, err := sendInfo(serverEndpoint, reportInterval, podName, client)
+		resp, err := sendInfo(serverEndpoint, podName, reportInterval, client)
 		if err != nil {
 			glog.Errorf("Error while sending info. Details: %v", err)
 		} else {
