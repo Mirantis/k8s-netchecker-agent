@@ -26,7 +26,7 @@ type Client interface {
 type Payload struct {
 	ReportInterval int                 `json:"report_interval"`
 	PodName        string              `json:"podname"`
-	HostDate       string              `json:"hostdate"`
+	HostDate       time.Time           `json:"hostdate"`
 	LookupHost     map[string][]string `json:"nslookup"`
 	IPs            map[string][]string `json:"ips"`
 }
@@ -39,7 +39,7 @@ func sendInfo(srvEndpoint, podName string, repIntl int, cl Client) (*http.Respon
 	}).String()
 
 	payload := &Payload{
-		HostDate:       time.Now().String(),
+		HostDate:       time.Now(),
 		IPs:            linkV4Info(),
 		ReportInterval: repIntl,
 		PodName:        podName,
