@@ -1,5 +1,6 @@
 language: go
 go:
   - 1.7.x
-install: curl https://glide.sh/get | sh && make get-deps
+before_install: mkdir $GOPATH/bin && curl https://glide.sh/get | sh
+install: make get-deps
 script: make test
