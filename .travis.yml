@@ -3,4 +3,4 @@ go:
   - 1.7.x
 before_install: mkdir $GOPATH/bin && curl https://glide.sh/get | sh
 install: make get-deps
-script: make test
+script: make test-local
