@@ -2,10 +2,8 @@ FROM busybox
 
 MAINTAINER Artem Roma <aroma@mirantis.com>
 
-ADD _output/agent /opt/bin/agent
+COPY _output/agent /usr/bin/netchecker-agent
 
-ENV PATH=$PATH:/opt/bin
+ENTRYPOINT ["netchecker-agent", "-logtostderr"]
 
-ENTRYPOINT ["agent"]
-
-CMD ["-v=5", "-alsologtostderr=true"]
+CMD ["-v=5"]

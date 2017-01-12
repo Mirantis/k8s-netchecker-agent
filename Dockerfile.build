@@ -2,8 +2,6 @@ FROM golang:1.7-alpine
 
 MAINTAINER Artem Roma <aroma@mirantis.com>
 
-RUN apk add --update bash git
+RUN apk add --update bash
 
-RUN go get github.com/golang/glog
-
-WORKDIR /go/src/github.com/aateem/mcp-netchecker-agent
+WORKDIR /go/src/github.com/Mirantis/k8s-netchecker-agent
