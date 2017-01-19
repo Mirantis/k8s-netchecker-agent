@@ -22,7 +22,7 @@ spec:
           args:
             - "-v=5"
             - "-alsologtostderr=true"
-            - "-serverendopoint=netchecker-service:8081"
+            - "-serverendpoint=netchecker-service:8081"
             - "-reportinterval=60"
           imagePullPolicy: Always
       nodeSelector:
@@ -53,7 +53,7 @@ spec:
           args:
             - "-v=5"
             - "-alsologtostderr=true"
-            - "-serverendopoint=netchecker-service:8081"
+            - "-serverendpoint=netchecker-service:8081"
             - "-reportinterval=60"
           imagePullPolicy: Always
       nodeSelector:
