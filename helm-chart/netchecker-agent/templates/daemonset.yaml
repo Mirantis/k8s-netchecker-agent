@@ -24,7 +24,7 @@ spec:
                 fieldRef:
                   fieldPath: metadata.name
           args:
-            {{- range .Values.container.args }}
+            {{- range $container.args }}
             - {{ . | quote }}
             {{- end}}
 ---
