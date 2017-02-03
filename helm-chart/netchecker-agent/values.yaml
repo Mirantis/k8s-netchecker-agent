@@ -4,6 +4,7 @@ image:
   pullPolicy: always
 
 container:
+  name: netchecker-agent
   args:
     - -v=5
     - -logtostderr

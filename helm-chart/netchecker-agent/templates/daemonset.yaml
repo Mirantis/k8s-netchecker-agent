@@ -13,7 +13,7 @@ spec:
         app: {{ . }}
     spec:
       containers:
-        - name: {{ .Values.agent.app.name }}
+        - name: {{ .Values.container.name }}
           image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
