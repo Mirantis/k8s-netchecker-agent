@@ -1,0 +1,29 @@
+{{- range .Values.agents.names }}
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  labels:
+    app: {{ . }}
+  name: {{ . }}
+spec:
+  template:
+    metadata:
+      name: {{ . }}
+      labels:
+        app: {{ . }}
+    spec:
+      containers:
+        - name: {{ .Values.agent.app.name }}
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: MY_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          args:
+            {{- range .Values.container.args }}
+            - {{ . | quote }}
+            {{- end}}
+---
+{{- end }}
