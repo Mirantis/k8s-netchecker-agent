@@ -11,6 +11,11 @@ container:
     - -serverendpoint=netchecker-service:8081
     - -reportinterval=60
 
+# Daemonset description for agent and agent-hostnet
+# are different only by name of the application
+# (subsequently by 'app' label value), so templates
+# for corresponding resources are instantinated
+# in range loop that iterates over following names
 agents:
   names:
     - netchecker-agent
