@@ -1,7 +1,7 @@
 image:
   repository: quay.io/l23network/k8s-netchecker-agent
   tag: latest
-  pullPolicy: always
+  pullPolicy: Always
 
 container:
   name: netchecker-agent

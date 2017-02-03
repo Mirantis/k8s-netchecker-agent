@@ -1,21 +1,23 @@
-{{- range .Values.agents.names }}
+{{- $container := .Values.container -}}
+{{- $image := .Values.image -}}
+{{- range $agent_name := .Values.agents.names }}
 apiVersion: extensions/v1beta1
 kind: DaemonSet
 metadata:
   labels:
-    app: {{ . }}
-  name: {{ . }}
+    app: {{ $agent_name }}
+  name: {{ $agent_name }}
 spec:
   template:
     metadata:
-      name: {{ . }}
+      name: {{ $agent_name }}
       labels:
-        app: {{ . }}
+        app: {{ $agent_name }}
     spec:
       containers:
-        - name: {{ .Values.container.name }}
-          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+        - name: {{ $container.name }}
+          image: {{ $image.repository }}:{{ $image.tag }}
+          imagePullPolicy: {{ $image.pullPolicy }}
           env:
             - name: MY_POD_NAME
               valueFrom:
