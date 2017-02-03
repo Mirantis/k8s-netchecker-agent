@@ -2,16 +2,15 @@ image:
   repository: quay.io/l23network/k8s-netchecker-agent
   tag: latest
   pullPolicy: always
+
+container:
   args:
     - -v=5
     - -logtostderr
     - -serverendpoint=netchecker-service:8081
     - -reportinterval=60
 
-agent:
-  app:
-    name: netchecker-agent
-
-agentHostnet:
-  app:
-    name: netchecker-agent-hostnet
+agents:
+  names:
+    - netchecker-agent
+    - netchecker-agent-hostnet
