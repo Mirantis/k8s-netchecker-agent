@@ -27,5 +27,6 @@ spec:
             {{- range $container.args }}
             - {{ . | quote }}
             {{- end}}
+          {{ if $agent_name eq netchecker-agent-hostnet }}hostNetwork: True{{ end }}
 ---
 {{- end }}
