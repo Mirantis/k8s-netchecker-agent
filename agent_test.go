@@ -24,7 +24,7 @@ func TestSendInfo(t *testing.T) {
 	serverEndPoint := "localhost:8888"
 	reportInterval := 5
 	podName := "test-pod"
-	_, err := sendInfo(serverEndPoint, podName, reportInterval, fakeClient)
+	_, err := sendInfo(serverEndPoint, podName, reportInterval, false, fakeClient)
 	if err != nil {
 		t.Errorf("sendInfo should not return error. Details: %v", err)
 	}
@@ -62,7 +62,12 @@ func TestSendInfo(t *testing.T) {
 		t.Errorf("Error should not occur while unmarshaling fake request's payload. Details: %v", err)
 	}
 
-	if expectedIPs := linkV4Info(); !reflect.DeepEqual(expectedIPs, payload.IPs) {
+	iproc := &IfaceProcessor{}
+	expectedIPs, err := iproc.ProcessIifaces()
+	if err != nil {
+		t.Errorf("Error should not occured while retrieving expected ifaces. Details: %v", err)
+	}
+	if !reflect.DeepEqual(expectedIPs, payload.IPs) {
 		t.Errorf("IPs data from payload is not as expected. expected %v\n actual %v", expectedIPs, payload.IPs)
 	}
 
@@ -73,5 +78,10 @@ func TestSendInfo(t *testing.T) {
 	}
 	if !reflect.DeepEqual(payload.LookupHost, map[string][]string{expectedHost: addrs}) {
 		t.Errorf("LookupHost data from the payload is not as expected")
+	}
+
+	if payload.ZeroExtenderLength != 0 {
+		t.Errorf("ZeroExtenderLength should be %v instead it is %v",
+			0, payload.ZeroExtenderLength)
 	}
 }

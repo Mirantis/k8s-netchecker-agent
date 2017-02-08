@@ -1,6 +1,8 @@
-hash: 2554967efad44d14a144d03f74ef0bdca36445961ac7b634ce0216e64f65f179
-updated: 2017-01-12T16:32:26.613410188+02:00
+hash: d6a85b0c0bbaa43dec026d2be9c7581535e248179e211fbe496cd9a643d2c26c
+updated: 2017-02-08T13:06:11.655824473+02:00
 imports:
 - name: github.com/golang/glog
   version: 23def4e6c14b4da8ac2ed8007337bc5eb5007998
+- name: github.com/vishvananda/netlink
+  version: dbc72376c86301bb873c332830857e73c9f701e3
 testImports: []
