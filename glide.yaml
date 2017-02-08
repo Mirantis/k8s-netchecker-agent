@@ -2,3 +2,4 @@ package: github.com/Mirantis/k8s-netchecker-agent
 import:
 - package: github.com/golang/glog
 - package: github.com/vishvananda/netlink
+- package: github.com/vishvananda/netns
