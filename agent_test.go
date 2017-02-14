@@ -24,7 +24,9 @@ func TestSendInfo(t *testing.T) {
 	serverEndPoint := "localhost:8888"
 	reportInterval := 5
 	podName := "test-pod"
-	_, err := sendInfo(serverEndPoint, podName, reportInterval, fakeClient)
+	extenderLength := 100
+	_, err := sendInfo(serverEndPoint, podName,
+		reportInterval, extenderLength, fakeClient)
 	if err != nil {
 		t.Errorf("sendInfo should not return error. Details: %v", err)
 	}
@@ -73,5 +75,10 @@ func TestSendInfo(t *testing.T) {
 	}
 	if !reflect.DeepEqual(payload.LookupHost, map[string][]string{expectedHost: addrs}) {
 		t.Errorf("LookupHost data from the payload is not as expected")
+	}
+
+	if len(payload.ZeroExtender) != extenderLength {
+		t.Errorf("Extender should be of %v len instead it is %v", extenderLength,
+			len(payload.ZeroExtender))
 	}
 }

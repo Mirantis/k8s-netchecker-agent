@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"net"
 	"net/http"
 	"net/url"
@@ -29,9 +30,12 @@ type Payload struct {
 	HostDate       time.Time           `json:"hostdate"`
 	LookupHost     map[string][]string `json:"nslookup"`
 	IPs            map[string][]string `json:"ips"`
+	ZeroExtender   []int8              `json:"zero_extender"`
 }
 
-func sendInfo(srvEndpoint, podName string, repIntl int, cl Client) (*http.Response, error) {
+func sendInfo(srvEndpoint, podName string,
+	repIntl int, extenderLength int, cl Client) (*http.Response, error) {
+
 	reqURL := (&url.URL{
 		Scheme: "http",
 		Host:   srvEndpoint,
@@ -44,6 +48,7 @@ func sendInfo(srvEndpoint, podName string, repIntl int, cl Client) (*http.Respon
 		ReportInterval: repIntl,
 		PodName:        podName,
 		LookupHost:     nsLookUp(srvEndpoint),
+		ZeroExtender:   make([]int8, extenderLength),
 	}
 
 	glog.V(10).Infof("Request payload before marshaling: %v", payload)
@@ -64,7 +69,10 @@ func sendInfo(srvEndpoint, podName string, repIntl int, cl Client) (*http.Respon
 }
 
 func nsLookUp(endpoint string) map[string][]string {
-	hostname := strings.Split(endpoint, ":")[0]
+	hostname, _, err := net.SplitHostPort(endpoint)
+	if err != nil {
+		glog.Errorf("Error while splitting endpont %v. Details: %v", endpoint, err)
+	}
 	addrs, err := net.LookupHost(hostname)
 	if err != nil {
 		glog.Errorf("DNS look up host error. Details: %v", err)
@@ -106,10 +114,20 @@ func main() {
 	var (
 		serverEndpoint string
 		reportInterval int
+		extenderLength int
 	)
 
 	flag.StringVar(&serverEndpoint, "serverendpoint", "netchecker-service:8081", "Netchecker server endpoint (host:port)")
 	flag.IntVar(&reportInterval, "reportinterval", 60, "Agent report interval")
+	flag.IntVar(&extenderLength, "zeroextenderlength", 1500,
+		fmt.Sprint(
+			"Length of zero bytes extender array ",
+			"that will be added to the agent's payload ",
+			"in case its size is less than MTU value. ",
+			"Is used to reveal problems with network packets ",
+			"fragmentation",
+		),
+	)
 	flag.Parse()
 
 	glog.V(5).Infof("Provided server endpoint: %v", serverEndpoint)
@@ -128,7 +146,7 @@ func main() {
 		glog.V(4).Infof("Sleep for %v second(s)", reportInterval)
 		time.Sleep(time.Duration(reportInterval) * time.Second)
 
-		resp, err := sendInfo(serverEndpoint, podName, reportInterval, client)
+		resp, err := sendInfo(serverEndpoint, podName, reportInterval, extenderLength, client)
 		if err != nil {
 			glog.Errorf("Error while sending info. Details: %v", err)
 		} else {
