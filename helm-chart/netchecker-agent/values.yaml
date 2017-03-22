@@ -1,5 +1,5 @@
 image:
-  repository: quay.io/l23network/k8s-netchecker-agent
+  repository: mirantis/k8s-netchecker-agent
   tag: latest
   pullPolicy: Always
 
