@@ -1,2 +1,8 @@
 _output
 vendor
+
+# CI related
+.build-image.complete
+.env-prepare.complete
+scripts/dind-cluster-v*
+scripts/get_helm.sh
