@@ -30,15 +30,21 @@ import (
 )
 
 const (
+	// Pod name variable in pod's environment
 	EnvVarPodName            = "MY_POD_NAME"
+	// Node name variable in pod's environment
 	EnvVarNodeName           = "MY_NODE_NAME"
+	// Server URL where keepalive message is sent to
 	NetcheckerAgentsEndpoint = "/api/v1/agents"
 )
 
+// REST API client interface that matches standard http.Client struct and
+// references only Do() method from there.
 type Client interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
+// Structure of payload for keepalive message sent from agent to server
 type Payload struct {
 	ReportInterval int                 `json:"report_interval"`
 	NodeName       string              `json:"nodename"`

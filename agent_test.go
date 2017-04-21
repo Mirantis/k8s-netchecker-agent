@@ -37,10 +37,10 @@ func TestSendInfo(t *testing.T) {
 
 	serverEndPoint := "localhost:8888"
 	reportInterval := 5
+	nodeName := strings.Split(serverEndPoint, ":")[0]
 	podName := "test-pod"
 	extenderLength := 100
-	_, err := sendInfo(serverEndPoint, podName,
-		reportInterval, extenderLength, fakeClient)
+	_, err := sendInfo(serverEndPoint, podName, nodeName, reportInterval, extenderLength, fakeClient)
 	if err != nil {
 		t.Errorf("sendInfo should not return error. Details: %v", err)
 	}
@@ -82,7 +82,7 @@ func TestSendInfo(t *testing.T) {
 		t.Errorf("IPs data from payload is not as expected. expected %v\n actual %v", expectedIPs, payload.IPs)
 	}
 
-	expectedHost := strings.Split(serverEndPoint, ":")[0]
+	expectedHost := nodeName
 	addrs, err := net.LookupHost(expectedHost)
 	if err != nil {
 		t.Errorf("DNS look up error should not occur. Details: %v", err)
@@ -94,5 +94,8 @@ func TestSendInfo(t *testing.T) {
 	if len(payload.ZeroExtender) != extenderLength {
 		t.Errorf("Extender should be of %v len instead it is %v", extenderLength,
 			len(payload.ZeroExtender))
+	}
+	if payload.NodeName != nodeName {
+		t.Errorf("Node name from payload (%v) does not match expected one (%v)", payload.NodeName, nodeName)
 	}
 }
