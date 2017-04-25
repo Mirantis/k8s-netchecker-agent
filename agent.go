@@ -30,16 +30,24 @@ import (
 )
 
 const (
-	EnvVarPodName            = "MY_POD_NAME"
+	// EnvVarPodName is a pod name variable in pod's environment
+	EnvVarPodName = "MY_POD_NAME"
+	// EnvVarNodeName is a node name variable in pod's environment
+	EnvVarNodeName = "MY_NODE_NAME"
+	// NetcheckerAgentsEndpoint is a server URL where keepalive message is sent to
 	NetcheckerAgentsEndpoint = "/api/v1/agents"
 )
 
+// Client is a REST API client interface that matches standard http.Client struct and
+// references only Do() method from there.
 type Client interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
+// Payload structure for keepalive message sent from agent to server
 type Payload struct {
 	ReportInterval int                 `json:"report_interval"`
+	NodeName       string              `json:"nodename"`
 	PodName        string              `json:"podname"`
 	HostDate       time.Time           `json:"hostdate"`
 	LookupHost     map[string][]string `json:"nslookup"`
@@ -47,7 +55,7 @@ type Payload struct {
 	ZeroExtender   []int8              `json:"zero_extender"`
 }
 
-func sendInfo(srvEndpoint, podName string,
+func sendInfo(srvEndpoint, podName string, nodeName string,
 	repIntl int, extenderLength int, cl Client) (*http.Response, error) {
 
 	reqURL := (&url.URL{
@@ -60,6 +68,7 @@ func sendInfo(srvEndpoint, podName string,
 		HostDate:       time.Now(),
 		IPs:            linkV4Info(),
 		ReportInterval: repIntl,
+		NodeName:       nodeName,
 		PodName:        podName,
 		LookupHost:     nsLookUp(srvEndpoint),
 		ZeroExtender:   make([]int8, extenderLength),
@@ -150,9 +159,13 @@ func main() {
 	glog.Info("Starting agent")
 
 	var podName string
+	var nodeName string
 	if podName = os.Getenv(EnvVarPodName); len(podName) == 0 {
-		glog.Error("Environment variable MY_POD_NAME is not set. No point in sending info. Exiting")
+		glog.Error("Environment variable %s is not set. No point in sending info. Exiting", EnvVarPodName)
 		os.Exit(1)
+	}
+	if nodeName = os.Getenv(EnvVarNodeName); len(nodeName) == 0 {
+		glog.Error("Environment variable %s is not set.", EnvVarNodeName)
 	}
 
 	client := &http.Client{}
@@ -160,7 +173,7 @@ func main() {
 		glog.V(4).Infof("Sleep for %v second(s)", reportInterval)
 		time.Sleep(time.Duration(reportInterval) * time.Second)
 
-		resp, err := sendInfo(serverEndpoint, podName, reportInterval, extenderLength, client)
+		resp, err := sendInfo(serverEndpoint, podName, nodeName, reportInterval, extenderLength, client)
 		if err != nil {
 			glog.Errorf("Error while sending info. Details: %v", err)
 		} else {

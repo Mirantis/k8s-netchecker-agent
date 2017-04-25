@@ -13,8 +13,12 @@ spec:
     spec:
       containers:
         - name: netchecker-agent
-          image: aateem/mcp-netchecker-agent:golang
+          image: mirantis/k8s-netchecker-agent:latest
           env:
+            - name: MY_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
             - name: MY_POD_NAME
               valueFrom:
                 fieldRef:
@@ -44,8 +48,12 @@ spec:
       hostNetwork: True
       containers:
         - name: netchecker-agent
-          image: aateem/mcp-netchecker-agent:golang
+          image: mirantis/k8s-netchecker-agent:latest
           env:
+            - name: MY_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
             - name: MY_POD_NAME
               valueFrom:
                 fieldRef:
