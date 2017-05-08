@@ -37,9 +37,9 @@ const (
 	EnvVarPodName = "MY_POD_NAME"
 	// EnvVarNodeName is a node name variable in pod's environment
 	EnvVarNodeName = "MY_NODE_NAME"
-	// NetcheckerAgentsEndpoint is a server URL where keepalive message is sent to
+	// NetcheckerAgentsEndpoint is a server URI where keepalive message is sent to
 	NetcheckerAgentsEndpoint = "/api/v1/agents"
-	// NetcheckerProbeEndpoint
+	// NetcheckerProbeEndpoint is a server URI that just provides simple 200 answer
 	NetcheckerProbeEndpoint = "/api/v1/ping"
 )
 
@@ -147,7 +147,7 @@ func linkV4Info() map[string][]string {
 	return result
 }
 
-func http_probe(endpoints []string, probeRes []ProbeResult, timeout time.Duration) {
+func httpProbe(endpoints []string, probeRes []ProbeResult, timeout time.Duration) {
 	for idx, ep := range endpoints {
 		reqURL := (&url.URL{
 			Scheme: "http",
@@ -229,7 +229,7 @@ func main() {
 	endPoints := []string{serverEndpoint}
 	client := &http.Client{}
 	for {
-		go http_probe(endPoints, probeRes, time.Duration(reportInterval-1)*time.Second)
+		go httpProbe(endPoints, probeRes, time.Duration(reportInterval-1)*time.Second)
 		glog.V(4).Infof("Sleep for %v second(s)", reportInterval)
 		time.Sleep(time.Duration(reportInterval) * time.Second)
 
