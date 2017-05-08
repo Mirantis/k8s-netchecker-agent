@@ -147,7 +147,7 @@ func linkV4Info() map[string][]string {
 	return result
 }
 
-func http_probe(endpoints []string, probeRes []ProbeResult) {
+func http_probe(endpoints []string, probeRes []ProbeResult, timeout time.Duration) {
 	for idx, ep := range endpoints {
 		reqURL := (&url.URL{
 			Scheme: "http",
@@ -166,6 +166,7 @@ func http_probe(endpoints []string, probeRes []ProbeResult) {
 		req = req.WithContext(ctx)
 
 		client := http.DefaultClient
+		client.Timeout = timeout
 		res, err := client.Do(req)
 		if err != nil {
 			glog.Fatal(err)
@@ -228,7 +229,7 @@ func main() {
 	endPoints := []string{serverEndpoint}
 	client := &http.Client{}
 	for {
-		go http_probe(endPoints, probeRes)
+		go http_probe(endPoints, probeRes, time.Duration(reportInterval-1)*time.Second)
 		glog.V(4).Infof("Sleep for %v second(s)", reportInterval)
 		time.Sleep(time.Duration(reportInterval) * time.Second)
 
