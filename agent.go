@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -27,6 +28,8 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/tcnksm/go-httpstat"
+	"io/ioutil"
 )
 
 const (
@@ -36,6 +39,8 @@ const (
 	EnvVarNodeName = "MY_NODE_NAME"
 	// NetcheckerAgentsEndpoint is a server URL where keepalive message is sent to
 	NetcheckerAgentsEndpoint = "/api/v1/agents"
+	// NetcheckerProbeEndpoint
+	NetcheckerProbeEndpoint = "/api/v1/ping"
 )
 
 // Client is a REST API client interface that matches standard http.Client struct and
@@ -52,10 +57,18 @@ type Payload struct {
 	HostDate       time.Time           `json:"hostdate"`
 	LookupHost     map[string][]string `json:"nslookup"`
 	IPs            map[string][]string `json:"ips"`
+	NetworkProbes  []ProbeResult       `json:"network_probes"`
 	ZeroExtender   []int8              `json:"zero_extender"`
 }
 
-func sendInfo(srvEndpoint, podName string, nodeName string,
+// ProbeResult structure for network probing results
+type ProbeResult struct {
+	EndPoint        string
+	Total           int
+	ContentTransfer int
+}
+
+func sendInfo(srvEndpoint, podName string, nodeName string, probeRes []ProbeResult,
 	repIntl int, extenderLength int, cl Client) (*http.Response, error) {
 
 	reqURL := (&url.URL{
@@ -71,6 +84,7 @@ func sendInfo(srvEndpoint, podName string, nodeName string,
 		NodeName:       nodeName,
 		PodName:        podName,
 		LookupHost:     nsLookUp(srvEndpoint),
+		NetworkProbes:  probeRes,
 		ZeroExtender:   make([]int8, extenderLength),
 	}
 
@@ -133,6 +147,48 @@ func linkV4Info() map[string][]string {
 	return result
 }
 
+func http_probe(endpoints []string, probeRes []ProbeResult) {
+	for idx, ep := range endpoints {
+		reqURL := (&url.URL{
+			Scheme: "http",
+			Host:   ep,
+			Path:   NetcheckerProbeEndpoint,
+		}).String()
+
+		req, err := http.NewRequest("GET", reqURL, nil)
+		if err != nil {
+			glog.Fatal(err)
+		}
+
+		// Create go-httpstat powered context and pass it to http.Request
+		var result httpstat.Result
+		ctx := httpstat.WithHTTPStat(req.Context(), &result)
+		req = req.WithContext(ctx)
+
+		client := http.DefaultClient
+		res, err := client.Do(req)
+		if err != nil {
+			glog.Fatal(err)
+		}
+
+		if _, err := io.Copy(ioutil.Discard, res.Body); err != nil {
+			glog.Fatal(err)
+		}
+		res.Body.Close()
+		t := time.Now()
+		result.End(t)
+
+		curRes := new(ProbeResult)
+		curRes.EndPoint = ep
+		curRes.Total = int(result.Total(t) / time.Millisecond)
+		curRes.ContentTransfer = int(result.ContentTransfer(t) / time.Millisecond)
+		probeRes[idx] = *curRes
+
+		glog.V(5).Infof("HTTP Probe (%v): Total: %d ms, Content Transfer: %d ms",
+			reqURL, curRes.Total, curRes.ContentTransfer)
+	}
+}
+
 func main() {
 	var (
 		serverEndpoint string
@@ -168,12 +224,15 @@ func main() {
 		glog.Error("Environment variable %s is not set.", EnvVarNodeName)
 	}
 
+	probeRes := make([]ProbeResult, 1)
+	endPoints := []string{serverEndpoint}
 	client := &http.Client{}
 	for {
+		go http_probe(endPoints, probeRes)
 		glog.V(4).Infof("Sleep for %v second(s)", reportInterval)
 		time.Sleep(time.Duration(reportInterval) * time.Second)
 
-		resp, err := sendInfo(serverEndpoint, podName, nodeName, reportInterval, extenderLength, client)
+		resp, err := sendInfo(serverEndpoint, podName, nodeName, probeRes, reportInterval, extenderLength, client)
 		if err != nil {
 			glog.Errorf("Error while sending info. Details: %v", err)
 		} else {
