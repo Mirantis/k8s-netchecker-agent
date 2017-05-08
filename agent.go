@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"reflect"
 	"strings"
 	"time"
 
@@ -63,9 +64,13 @@ type Payload struct {
 
 // ProbeResult structure for network probing results
 type ProbeResult struct {
-	EndPoint        string
-	Total           int
-	ContentTransfer int
+	EndPoint         string
+	Total            int
+	ContentTransfer  int
+	TCPConnection    int
+	DNSLookup        int
+	Connect          int
+	ServerProcessing int
 }
 
 func sendInfo(srvEndpoint, podName string, nodeName string, probeRes []ProbeResult,
@@ -183,11 +188,27 @@ func httpProbe(endpoints []string, probeRes []ProbeResult, timeout time.Duration
 		curRes.EndPoint = ep
 		curRes.Total = int(result.Total(t) / time.Millisecond)
 		curRes.ContentTransfer = int(result.ContentTransfer(t) / time.Millisecond)
+		curRes.Connect = int(result.Connect / time.Millisecond)
+		curRes.DNSLookup = int(result.DNSLookup / time.Millisecond)
+		curRes.ServerProcessing = int(result.ServerProcessing / time.Millisecond)
+		curRes.TCPConnection = int(result.TCPConnection / time.Millisecond)
 		probeRes[idx] = *curRes
 
-		glog.V(5).Infof("HTTP Probe (%v): Total: %d ms, Content Transfer: %d ms",
-			reqURL, curRes.Total, curRes.ContentTransfer)
+		// keep variables order
+		fields := []string{"Total", "ContentTransfer", "Connect", "DNSLookup", "ServerProcessing",
+			"TCPConnection"}
+		resStr := ""
+		for _, field := range fields {
+			resStr += (fmt.Sprintf("%s: %d ms; ", field, getFieldInteger(curRes, field)))
+		}
+		glog.V(5).Infof("HTTP Probe (%v): %v", reqURL, resStr)
 	}
+}
+
+func getFieldInteger(res *ProbeResult, field string) int {
+	r := reflect.ValueOf(res)
+	f := reflect.Indirect(r).FieldByName(field)
+	return int(f.Int())
 }
 
 func main() {
