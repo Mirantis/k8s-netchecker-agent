@@ -28,7 +28,7 @@ spec:
             - "-alsologtostderr=true"
             - "-serverendpoint=netchecker-service:8081"
             - "-reportinterval=60"
-            - "-probeurls=http://10.233.0.1:443/"
+            - "-probeurls=http://ipinfo.io"
           imagePullPolicy: Always
       nodeSelector:
         netchecker: agent

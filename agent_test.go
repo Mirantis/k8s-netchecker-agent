@@ -41,7 +41,7 @@ func TestSendInfo(t *testing.T) {
 	podName := "test-pod"
 	extenderLength := 100
 	netProbes := []ProbeResult{
-		{"0.0.0.0:8081", 50, 1, 0, 0, 0, 0},
+		{"0.0.0.0:8081", 1, 50, 1, 0, 0, 0, 0},
 	}
 	_, err := sendInfo(serverEndPoint, podName, nodeName, netProbes, reportInterval, extenderLength, fakeClient)
 	if err != nil {
