@@ -83,6 +83,7 @@ func sendInfo(srvEndpoint, podName string, nodeName string, probeRes []ProbeResu
 		Path:   strings.Join([]string{NetcheckerAgentsEndpoint, podName}, "/"),
 	}).String()
 
+	glog.V(10).Infof("Probes result before marshaling: %v", probeRes)
 	payload := &Payload{
 		HostDate:       time.Now(),
 		IPs:            linkV4Info(),
@@ -157,7 +158,7 @@ func httpProbe(url string, probeRes *ProbeResult, timeout time.Duration) {
 	curRes := new(ProbeResult)
 	curRes.URL = url
 	curRes.Result = 0
-	probeRes = curRes
+	*probeRes = *curRes
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -193,6 +194,7 @@ func httpProbe(url string, probeRes *ProbeResult, timeout time.Duration) {
 	curRes.ServerProcessing = int(result.ServerProcessing / time.Millisecond)
 	curRes.TCPConnection = int(result.TCPConnection / time.Millisecond)
 	curRes.Result = 1
+	*probeRes = *curRes
 
 	// keep variables order
 	fields := []string{"Total", "ContentTransfer", "Connect", "DNSLookup", "ServerProcessing",
@@ -263,7 +265,7 @@ func main() {
 	client := &http.Client{}
 	for {
 		for idx, reqUrl := range probeUrls {
-			go httpProbe(reqUrl, &probeRes[idx], time.Duration(reportInterval-1)*time.Second)
+			go httpProbe(reqUrl, &(probeRes[idx]), time.Duration(reportInterval-1)*time.Second)
 		}
 		glog.V(4).Infof("Sleep for %v second(s)", reportInterval)
 		time.Sleep(time.Duration(reportInterval) * time.Second)
