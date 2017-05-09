@@ -64,7 +64,8 @@ type Payload struct {
 
 // ProbeResult structure for network probing results
 type ProbeResult struct {
-	EndPoint         string
+	URL              string
+	Result           int
 	Total            int
 	ContentTransfer  int
 	TCPConnection    int
@@ -152,57 +153,55 @@ func linkV4Info() map[string][]string {
 	return result
 }
 
-func httpProbe(endpoints []string, probeRes []ProbeResult, timeout time.Duration) {
-	for idx, ep := range endpoints {
-		reqURL := (&url.URL{
-			Scheme: "http",
-			Host:   ep,
-			Path:   NetcheckerProbeEndpoint,
-		}).String()
+func httpProbe(url string, probeRes *ProbeResult, timeout time.Duration) {
+	curRes := new(ProbeResult)
+	curRes.URL = url
+	curRes.Result = 0
+	probeRes = curRes
 
-		req, err := http.NewRequest("GET", reqURL, nil)
-		if err != nil {
-			glog.Fatal(err)
-		}
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		glog.Error(err)
+		return
+	}
 
-		// Create go-httpstat powered context and pass it to http.Request
-		var result httpstat.Result
-		ctx := httpstat.WithHTTPStat(req.Context(), &result)
-		req = req.WithContext(ctx)
+	// Create go-httpstat powered context and pass it to http.Request
+	var result httpstat.Result
+	ctx := httpstat.WithHTTPStat(req.Context(), &result)
+	req = req.WithContext(ctx)
 
-		client := http.DefaultClient
-		client.Timeout = timeout
-		res, err := client.Do(req)
-		if err != nil {
-			glog.Fatal(err)
-		}
+	client := http.DefaultClient
+	client.Timeout = timeout
+	res, err := client.Do(req)
+	if err != nil {
+		glog.Error(err)
+	}
 
+	if err == nil {
 		if _, err := io.Copy(ioutil.Discard, res.Body); err != nil {
-			glog.Fatal(err)
+			glog.Error(err)
 		}
 		res.Body.Close()
-		t := time.Now()
-		result.End(t)
-
-		curRes := new(ProbeResult)
-		curRes.EndPoint = ep
-		curRes.Total = int(result.Total(t) / time.Millisecond)
-		curRes.ContentTransfer = int(result.ContentTransfer(t) / time.Millisecond)
-		curRes.Connect = int(result.Connect / time.Millisecond)
-		curRes.DNSLookup = int(result.DNSLookup / time.Millisecond)
-		curRes.ServerProcessing = int(result.ServerProcessing / time.Millisecond)
-		curRes.TCPConnection = int(result.TCPConnection / time.Millisecond)
-		probeRes[idx] = *curRes
-
-		// keep variables order
-		fields := []string{"Total", "ContentTransfer", "Connect", "DNSLookup", "ServerProcessing",
-			"TCPConnection"}
-		resStr := ""
-		for _, field := range fields {
-			resStr += (fmt.Sprintf("%s: %d ms; ", field, getFieldInteger(curRes, field)))
-		}
-		glog.V(5).Infof("HTTP Probe (%v): %v", reqURL, resStr)
 	}
+	t := time.Now()
+	result.End(t)
+
+	curRes.Total = int(result.Total(t) / time.Millisecond)
+	curRes.ContentTransfer = int(result.ContentTransfer(t) / time.Millisecond)
+	curRes.Connect = int(result.Connect / time.Millisecond)
+	curRes.DNSLookup = int(result.DNSLookup / time.Millisecond)
+	curRes.ServerProcessing = int(result.ServerProcessing / time.Millisecond)
+	curRes.TCPConnection = int(result.TCPConnection / time.Millisecond)
+	curRes.Result = 1
+
+	// keep variables order
+	fields := []string{"Total", "ContentTransfer", "Connect", "DNSLookup", "ServerProcessing",
+		"TCPConnection"}
+	resStr := ""
+	for _, field := range fields {
+		resStr += (fmt.Sprintf("%s: %d ms; ", field, getFieldInteger(curRes, field)))
+	}
+	glog.V(5).Infof("HTTP Probe (%v): %v", url, resStr)
 }
 
 func getFieldInteger(res *ProbeResult, field string) int {
@@ -214,19 +213,23 @@ func getFieldInteger(res *ProbeResult, field string) int {
 func main() {
 	var (
 		serverEndpoint string
+		probeUrlsArg   string
 		reportInterval int
 		extenderLength int
 	)
 
-	flag.StringVar(&serverEndpoint, "serverendpoint", "netchecker-service:8081", "Netchecker server endpoint (host:port)")
-	flag.IntVar(&reportInterval, "reportinterval", 60, "Agent report interval")
+	flag.StringVar(&serverEndpoint, "serverendpoint", "netchecker-service:8081",
+		"Netchecker server endpoint (host:port)")
+	flag.StringVar(&probeUrlsArg, "probeurls", "", "HTTP servers URLs to measure "+
+		"access latency to (host:port/path)")
+	flag.IntVar(&reportInterval, "reportinterval", 60, "Agent report interval (seconds)")
 	flag.IntVar(&extenderLength, "zeroextenderlength", 1500,
 		fmt.Sprint(
 			"Length of zero bytes extender array ",
 			"that will be added to the agent's payload ",
 			"in case its size is less than MTU value. ",
 			"Is used to reveal problems with network packets ",
-			"fragmentation",
+			"fragmentation.",
 		),
 	)
 	flag.Parse()
@@ -246,11 +249,22 @@ func main() {
 		glog.Error("Environment variable %s is not set.", EnvVarNodeName)
 	}
 
-	probeRes := make([]ProbeResult, 1)
-	endPoints := []string{serverEndpoint}
+	probeUrls := strings.FieldsFunc(probeUrlsArg, func(r rune) bool {
+		return r == ',' || r == ';'
+	})
+	serverUrl := (&url.URL{
+		Scheme: "http",
+		Host:   serverEndpoint,
+		Path:   NetcheckerProbeEndpoint,
+	}).String()
+	probeUrls = append(probeUrls, serverUrl)
+	probeRes := make([]ProbeResult, len(probeUrls))
+
 	client := &http.Client{}
 	for {
-		go httpProbe(endPoints, probeRes, time.Duration(reportInterval-1)*time.Second)
+		for idx, reqUrl := range probeUrls {
+			go httpProbe(reqUrl, &probeRes[idx], time.Duration(reportInterval-1)*time.Second)
+		}
 		glog.V(4).Infof("Sleep for %v second(s)", reportInterval)
 		time.Sleep(time.Duration(reportInterval) * time.Second)
 
