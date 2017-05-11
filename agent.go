@@ -109,6 +109,9 @@ func sendInfo(srvEndpoint, podName string, nodeName string, probeRes []ProbeResu
 	req.Header.Add("Content-Type", "application/json")
 
 	resp, err := cl.Do(req)
+	if resp != nil {
+		resp.Body.Close()
+	}
 	return resp, err
 }
 
@@ -154,7 +157,7 @@ func linkV4Info() map[string][]string {
 	return result
 }
 
-func httpProbe(url string, probeRes *ProbeResult, timeout time.Duration) {
+func httpProbe(url string, probeRes *ProbeResult, client Client) {
 	curRes := new(ProbeResult)
 	curRes.URL = url
 	curRes.Result = 0
@@ -171,8 +174,6 @@ func httpProbe(url string, probeRes *ProbeResult, timeout time.Duration) {
 	ctx := httpstat.WithHTTPStat(req.Context(), &result)
 	req = req.WithContext(ctx)
 
-	client := http.DefaultClient
-	client.Timeout = timeout
 	res, err := client.Do(req)
 	if err != nil {
 		glog.Error(err)
@@ -262,15 +263,20 @@ func main() {
 	probeUrls = append(probeUrls, serverUrl)
 	probeRes := make([]ProbeResult, len(probeUrls))
 
-	client := &http.Client{}
+	netTransport := &http.Transport{DisableKeepAlives: true}
+	httpClient := &http.Client{
+		Timeout:   time.Duration(reportInterval-1) * time.Second,
+		Transport: netTransport,
+	}
+
 	for {
 		for idx, reqUrl := range probeUrls {
-			go httpProbe(reqUrl, &(probeRes[idx]), time.Duration(reportInterval-1)*time.Second)
+			go httpProbe(reqUrl, &(probeRes[idx]), httpClient)
 		}
 		glog.V(4).Infof("Sleep for %v second(s)", reportInterval)
 		time.Sleep(time.Duration(reportInterval) * time.Second)
 
-		resp, err := sendInfo(serverEndpoint, podName, nodeName, probeRes, reportInterval, extenderLength, client)
+		resp, err := sendInfo(serverEndpoint, podName, nodeName, probeRes, reportInterval, extenderLength, httpClient)
 		if err != nil {
 			glog.Errorf("Error while sending info. Details: %v", err)
 		} else {
