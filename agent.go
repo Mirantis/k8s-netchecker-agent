@@ -255,12 +255,12 @@ func main() {
 	probeUrls := strings.FieldsFunc(probeUrlsArg, func(r rune) bool {
 		return r == ',' || r == ';'
 	})
-	serverUrl := (&url.URL{
+	serverURL := (&url.URL{
 		Scheme: "http",
 		Host:   serverEndpoint,
 		Path:   NetcheckerProbeEndpoint,
 	}).String()
-	probeUrls = append(probeUrls, serverUrl)
+	probeUrls = append(probeUrls, serverURL)
 	probeRes := make([]ProbeResult, len(probeUrls))
 
 	netTransport := &http.Transport{DisableKeepAlives: true}
@@ -270,8 +270,8 @@ func main() {
 	}
 
 	for {
-		for idx, reqUrl := range probeUrls {
-			go httpProbe(reqUrl, &(probeRes[idx]), httpClient)
+		for idx, probeURL := range probeUrls {
+			go httpProbe(probeURL, &(probeRes[idx]), httpClient)
 		}
 		glog.V(4).Infof("Sleep for %v second(s)", reportInterval)
 		time.Sleep(time.Duration(reportInterval) * time.Second)
