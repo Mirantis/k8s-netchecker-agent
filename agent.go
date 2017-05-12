@@ -62,10 +62,11 @@ type Payload struct {
 	ZeroExtender   []int8              `json:"zero_extender"`
 }
 
-// ProbeResult structure for network probing results
+// ProbeResult structure contains network probing result for one URL
 type ProbeResult struct {
 	URL              string
-	Result           int
+	ConnectionResult int
+	HTTPCode         int
 	Total            int
 	ContentTransfer  int
 	TCPConnection    int
@@ -160,7 +161,7 @@ func linkV4Info() map[string][]string {
 func httpProbe(url string, probeRes *ProbeResult, client Client) {
 	curRes := new(ProbeResult)
 	curRes.URL = url
-	curRes.Result = 0
+	curRes.ConnectionResult = 0
 	*probeRes = *curRes
 
 	req, err := http.NewRequest("GET", url, nil)
@@ -178,6 +179,9 @@ func httpProbe(url string, probeRes *ProbeResult, client Client) {
 	if err != nil {
 		glog.Error(err)
 	}
+	if res != nil {
+		curRes.HTTPCode = res.StatusCode
+	}
 
 	if err == nil {
 		if _, err := io.Copy(ioutil.Discard, res.Body); err != nil {
@@ -194,7 +198,7 @@ func httpProbe(url string, probeRes *ProbeResult, client Client) {
 	curRes.DNSLookup = int(result.DNSLookup / time.Millisecond)
 	curRes.ServerProcessing = int(result.ServerProcessing / time.Millisecond)
 	curRes.TCPConnection = int(result.TCPConnection / time.Millisecond)
-	curRes.Result = 1
+	curRes.ConnectionResult = 1
 	*probeRes = *curRes
 
 	// keep variables order
@@ -204,7 +208,7 @@ func httpProbe(url string, probeRes *ProbeResult, client Client) {
 	for _, field := range fields {
 		resStr += (fmt.Sprintf("%s: %d ms; ", field, getFieldInteger(curRes, field)))
 	}
-	glog.V(5).Infof("HTTP Probe (%v): %v", url, resStr)
+	glog.V(5).Infof("HTTP Probe (%v): HTTPCode: %v; %v", url, curRes.HTTPCode, resStr)
 }
 
 func getFieldInteger(res *ProbeResult, field string) int {
