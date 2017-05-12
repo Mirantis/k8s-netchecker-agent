@@ -40,7 +40,10 @@ func TestSendInfo(t *testing.T) {
 	nodeName := strings.Split(serverEndPoint, ":")[0]
 	podName := "test-pod"
 	extenderLength := 100
-	_, err := sendInfo(serverEndPoint, podName, nodeName, reportInterval, extenderLength, fakeClient)
+	netProbes := []ProbeResult{
+		{"0.0.0.0:8081", 1, 50, 1, 0, 0, 0, 0},
+	}
+	_, err := sendInfo(serverEndPoint, podName, nodeName, netProbes, reportInterval, extenderLength, fakeClient)
 	if err != nil {
 		t.Errorf("sendInfo should not return error. Details: %v", err)
 	}
@@ -97,5 +100,8 @@ func TestSendInfo(t *testing.T) {
 	}
 	if payload.NodeName != nodeName {
 		t.Errorf("Node name from payload (%v) does not match expected one (%v)", payload.NodeName, nodeName)
+	}
+	if !reflect.DeepEqual(payload.NetworkProbes, netProbes) {
+		t.Errorf("NetworkProbes data from the payload is not as expected")
 	}
 }
