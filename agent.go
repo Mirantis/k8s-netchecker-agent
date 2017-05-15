@@ -16,12 +16,14 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
+	"net/http/httptrace"
 	"net/url"
 	"os"
 	"reflect"
@@ -73,6 +75,10 @@ type ProbeResult struct {
 	DNSLookup        int
 	Connect          int
 	ServerProcessing int
+}
+
+type ConnectionResult struct {
+	Established bool
 }
 
 func sendInfo(srvEndpoint, podName string, nodeName string, probeRes []ProbeResult,
@@ -158,6 +164,14 @@ func linkV4Info() map[string][]string {
 	return result
 }
 
+func withConnectTrace(ctx context.Context, r *ConnectionResult) context.Context {
+	return httptrace.WithClientTrace(ctx, &httptrace.ClientTrace{
+		GotConn: func(i httptrace.GotConnInfo) {
+			r.Established = true
+		},
+	})
+}
+
 func httpProbe(url string, probeRes *ProbeResult, client Client) {
 	curRes := new(ProbeResult)
 	curRes.URL = url
@@ -172,8 +186,10 @@ func httpProbe(url string, probeRes *ProbeResult, client Client) {
 
 	// Create go-httpstat powered context and pass it to http.Request
 	var result httpstat.Result
-	ctx := httpstat.WithHTTPStat(req.Context(), &result)
-	req = req.WithContext(ctx)
+	var connection ConnectionResult
+	ctxStat := httpstat.WithHTTPStat(req.Context(), &result)
+	ctxStat = withConnectTrace(ctxStat, &connection)
+	req = req.WithContext(ctxStat)
 
 	res, err := client.Do(req)
 	if err != nil {
@@ -193,9 +209,7 @@ func httpProbe(url string, probeRes *ProbeResult, client Client) {
 	result.End(t)
 
 	curRes.Total = int(result.Total(t) / time.Millisecond)
-	if err, ok := err.(net.Error); ok && err.Timeout() {
-		// connection timeout
-	} else {
+	if connection.Established {
 		curRes.ConnectionResult = 1
 		curRes.ContentTransfer = int(result.ContentTransfer(t) / time.Millisecond)
 		curRes.Connect = int(result.Connect / time.Millisecond)
