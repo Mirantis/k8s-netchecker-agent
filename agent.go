@@ -193,12 +193,16 @@ func httpProbe(url string, probeRes *ProbeResult, client Client) {
 	result.End(t)
 
 	curRes.Total = int(result.Total(t) / time.Millisecond)
-	curRes.ContentTransfer = int(result.ContentTransfer(t) / time.Millisecond)
-	curRes.Connect = int(result.Connect / time.Millisecond)
-	curRes.DNSLookup = int(result.DNSLookup / time.Millisecond)
-	curRes.ServerProcessing = int(result.ServerProcessing / time.Millisecond)
-	curRes.TCPConnection = int(result.TCPConnection / time.Millisecond)
-	curRes.ConnectionResult = 1
+	if err, ok := err.(net.Error); ok && err.Timeout() {
+		// connection timeout
+	} else {
+		curRes.ConnectionResult = 1
+		curRes.ContentTransfer = int(result.ContentTransfer(t) / time.Millisecond)
+		curRes.Connect = int(result.Connect / time.Millisecond)
+		curRes.DNSLookup = int(result.DNSLookup / time.Millisecond)
+		curRes.ServerProcessing = int(result.ServerProcessing / time.Millisecond)
+		curRes.TCPConnection = int(result.TCPConnection / time.Millisecond)
+	}
 	*probeRes = *curRes
 
 	// keep variables order
