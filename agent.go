@@ -77,7 +77,7 @@ type ProbeResult struct {
 	ServerProcessing int
 }
 
-type ConnectionResult struct {
+type connectionResult struct {
 	Established bool
 }
 
@@ -164,7 +164,7 @@ func linkV4Info() map[string][]string {
 	return result
 }
 
-func withConnectTrace(ctx context.Context, r *ConnectionResult) context.Context {
+func withConnectTrace(ctx context.Context, r *connectionResult) context.Context {
 	return httptrace.WithClientTrace(ctx, &httptrace.ClientTrace{
 		GotConn: func(i httptrace.GotConnInfo) {
 			r.Established = true
@@ -186,7 +186,7 @@ func httpProbe(url string, probeRes *ProbeResult, client Client) {
 
 	// Create go-httpstat powered context and pass it to http.Request
 	var result httpstat.Result
-	var connection ConnectionResult
+	var connection connectionResult
 	ctxStat := httpstat.WithHTTPStat(req.Context(), &result)
 	ctxStat = withConnectTrace(ctxStat, &connection)
 	req = req.WithContext(ctxStat)
