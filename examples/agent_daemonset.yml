@@ -2,7 +2,7 @@ apiVersion: extensions/v1beta1
 kind: DaemonSet
 metadata:
   labels:
-    app: netchecker-agent-hostnet
+    app: netchecker-agent
   name: netchecker-agent
 spec:
   template:
