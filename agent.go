@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/Mirantis/k8s-netchecker-agent/lib/uptimer"
 	"io"
 	"net"
 	"net/http"
@@ -58,6 +59,7 @@ type Payload struct {
 	NodeName       string              `json:"nodename"`
 	PodName        string              `json:"podname"`
 	HostDate       time.Time           `json:"hostdate"`
+	Uptime         uint64              `json:"uptime"`
 	LookupHost     map[string][]string `json:"nslookup"`
 	IPs            map[string][]string `json:"ips"`
 	NetworkProbes  []ProbeResult       `json:"network_probes"`
@@ -93,6 +95,7 @@ func sendInfo(srvEndpoint, podName string, nodeName string, probeRes []ProbeResu
 	glog.V(10).Infof("Probes result before marshaling: %v", probeRes)
 	payload := &Payload{
 		HostDate:       time.Now(),
+		Uptime:         uptimer.NewUptimer().Get(),
 		IPs:            linkV4Info(),
 		ReportInterval: repIntl,
 		NodeName:       nodeName,
