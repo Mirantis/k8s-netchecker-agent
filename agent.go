@@ -17,6 +17,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -288,7 +289,7 @@ func main() {
 	probeUrls = append(probeUrls, serverURL)
 	probeRes := make([]ProbeResult, len(probeUrls))
 
-	netTransport := &http.Transport{DisableKeepAlives: true}
+	netTransport := &http.Transport{DisableKeepAlives: true, TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
 	httpClient := &http.Client{
 		Timeout:   time.Duration(reportInterval-1) * time.Second,
 		Transport: netTransport,
