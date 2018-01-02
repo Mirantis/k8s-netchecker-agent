@@ -27,8 +27,8 @@ VENDOR_DIR = vendor
 ROOT_DIR = $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 
 # kubeadm-dind-cluster supports k8s versions:
-# "v1.4", "v1.5" and "v1.6".
-DIND_CLUSTER_VERSION ?= v1.5
+# "v1.6", "v1.7" and "v1.8".
+DIND_CLUSTER_VERSION ?= v1.8
 
 ENV_PREPARE_MARKER = .env-prepare.complete
 BUILD_IMAGE_MARKER = .build-image.complete
@@ -37,7 +37,7 @@ BUILD_IMAGE_MARKER = .build-image.complete
 ifeq ($(DOCKER_BUILD), yes)
 	_DOCKER_GOPATH = /go
 	_DOCKER_WORKDIR = $(_DOCKER_GOPATH)/src/github.com/Mirantis/k8s-netchecker-agent/
-	_DOCKER_IMAGE  = golang:1.7
+	_DOCKER_IMAGE  = golang:1.8
 	DOCKER_DEPS = apt-get update; apt-get install -y libpcap-dev;
 	DOCKER_EXEC = docker run --rm -it -v "$(ROOT_DIR):$(_DOCKER_WORKDIR)" \
 		-w "$(_DOCKER_WORKDIR)" $(_DOCKER_IMAGE)
