@@ -1,5 +1,6 @@
 {{- $container := .Values.container -}}
 {{- $image := .Values.image -}}
+{{- $updateStrategy := .Values.updateStrategy -}}
 {{- range $agent_name := .Values.agents.names }}
 apiVersion: extensions/v1beta1
 kind: DaemonSet
@@ -24,9 +25,17 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            - name: MY_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
           args:
             {{- range $container.args }}
             - {{ . | quote }}
-            {{- end}}
+            {{- end }}
+  {{- if $updateStrategy }}
+  updateStrategy:
+{{ toYaml $updateStrategy | indent 4 }}
+  {{- end }}
 ---
 {{- end }}

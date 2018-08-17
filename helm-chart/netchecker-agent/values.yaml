@@ -11,6 +11,11 @@ container:
     - -serverendpoint=netchecker-service:8081
     - -reportinterval=60
 
+updateStrategy:
+  rollingUpdate:
+    maxUnavailable: 1
+  type: RollingUpdate
+
 # Daemonset description for agent and agent-hostnet
 # are different only by name of the application
 # (subsequently by 'app' label value), so templates
