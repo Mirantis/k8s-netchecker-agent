@@ -1,8 +1,8 @@
-hash: c37496539577ed2757533ba06e9fd94ec11bd71be3e3c556d05c93013751ed1c
-updated: 2017-05-08T13:50:59.697335135+03:00
+hash: 20683e55f7ba557045c20d2909a22687937806278c901b4e373b8166bf1ddafd
+updated: 2018-08-24T12:19:09.0799155Z
 imports:
 - name: github.com/golang/glog
   version: 23def4e6c14b4da8ac2ed8007337bc5eb5007998
 - name: github.com/tcnksm/go-httpstat
-  version: ae0d799e7ee65d3dc46d7272368daa830aef6c5a
+  version: fae40520f4ba0a112874d1f0deb9498ebb2198cb
 testImports: []

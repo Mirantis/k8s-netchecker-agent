@@ -2,4 +2,4 @@ package: github.com/Mirantis/k8s-netchecker-agent
 import:
 - package: github.com/golang/glog
 - package: github.com/tcnksm/go-httpstat
-  version: v0.2.0
+  version: fae40520f4ba0a112874d1f0deb9498ebb2198cb
